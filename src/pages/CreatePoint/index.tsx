@@ -3,11 +3,11 @@ import {Link} from 'react-router-dom';
 import {FiArrowLeft} from 'react-icons/fi';
 import {Map, TileLayer, Marker } from 'react-leaflet';
 import api from '../../services/api';
+import {LeafletMouseEvent} from 'leaflet';
 
 import './styles.css';
 
 import logo from '../../assets/logo.svg';
-import { link } from 'fs';
 import Axios from 'axios';
 
 interface Item {
@@ -28,10 +28,19 @@ const CreatePoint = () =>{
     const [items, setItems] = useState<Item[]>([]);
     const [ufs, setUfs] = useState<string[]>([]);
     const [cities, setCities] = useState<string[]>([]);
-
+    const [selectedPosition, setSelectedPosition] = useState<[number, number]>([0, 0]);
     const [selectedUf, setSelectedUf] = useState('0');
     const [selectedCity, setSelectedCity] = useState('0');
 
+    const[initialPosition, setInitialPosition] = useState<[number, number]>([0, 0]);
+
+    useEffect(() =>{
+        navigator.geolocation.getCurrentPosition(position=>{
+            const {latitude, longitude} = position.coords;
+
+            setInitialPosition([latitude, longitude]);
+        });
+    }, []);
 
     useEffect(() => {
         api.get('items').then(response =>{
@@ -67,6 +76,14 @@ const CreatePoint = () =>{
     function handleSelectCity(event: ChangeEvent<HTMLSelectElement>){
         const city = event.target.value;
         setSelectedCity(city);
+    }
+
+    function handleMapClick(event: LeafletMouseEvent){
+        setSelectedPosition([
+            event.latlng.lat,
+            event.latlng.lng
+        ])
+        
     }
 
     return (
@@ -127,12 +144,12 @@ const CreatePoint = () =>{
                 </legend>
 
 
-                <Map center={[-5.0978047,-42.7955175]} zoom={15}>
+                <Map center={initialPosition} zoom={15} onClick={handleMapClick}>
                 <TileLayer
           attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Marker position={[-5.0978047, -42.7955175]}/>
+        <Marker position={selectedPosition}/>
 
                 </Map>
 
@@ -150,7 +167,7 @@ const CreatePoint = () =>{
 
                     <div className="field">
                         <label htmlFor="city">Cidade</label>
-                        <select name="city" id="city" value='0' onChange={handleSelectCity}>
+                        <select name="city" id="city" value={selectedCity} onChange={handleSelectCity}>
                             <option value="0">Selecione uma cidade</option>
                             {cities.map(city=>(
                                 <option key={city} value={city}>{city}</option>
